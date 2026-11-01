@@ -1,0 +1,13 @@
+{
+  "name": "pixel-log",
+  "version": "1.0.0",
+  "description": "픽셀 로그 백엔드 (Express + SQLite)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "bcryptjs": "^2.4.3"
+  }
+}
