@@ -1,0 +1,1426 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>픽셀 로그</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Noto+Sans+KR:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#FFF6F0; --bg2:#FFEFE6; --card:#FFFFFF; --line:#F1E2D6; --text:#4A3B33; --sub:#A08C7D;
+    --accent:#7FC9A8; --accent-deep:#5FB391; --accent-weak:#E6F6EF;
+    --pink:#F7A8B8; --pink-weak:#FDE9EE; --grow:#9DB8E8; --warn:#F0A57C; --track:#F3E9E1;
+    --shadow:0 3px 0 #F3E3D8, 0 6px 18px rgba(130,100,80,.08);
+  }
+  *{box-sizing:border-box}
+  [hidden]{display:none !important}
+  body{margin:0;padding:18px 14px 28px;color:var(--text);
+    background:
+      radial-gradient(circle at 12% 8%, #FFE6D8 0 12px, transparent 13px),
+      radial-gradient(circle at 88% 22%, #E8F6EE 0 14px, transparent 15px),
+      radial-gradient(circle at 18% 72%, #FDE9EE 0 10px, transparent 11px),
+      linear-gradient(180deg, var(--bg), var(--bg2));
+    background-attachment:fixed;
+    font-family:"Gowun Dodum","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+    display:flex;flex-direction:column;align-items:center;gap:14px}
+  .app{width:100%;max-width:410px;display:flex;flex-direction:column;gap:14px}
+  .card{background:var(--card);border:1.5px solid var(--line);border-radius:22px;padding:16px 16px 17px;box-shadow:var(--shadow)}
+  h2{font-family:"Noto Sans KR","Malgun Gothic",sans-serif;font-size:14.5px;font-weight:700;margin:0 0 11px;color:var(--text);letter-spacing:-.2px}
+  h2 .hint{font-family:"Gowun Dodum",sans-serif;font-weight:400}
+  .topbar{display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .date{font-family:"Noto Sans KR","Malgun Gothic",sans-serif;font-weight:700;font-size:16px;letter-spacing:-.3px}
+  button{font-family:inherit;cursor:pointer}
+  .btn{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:8px 13px;font-size:12.5px;color:var(--text);
+    transition:transform .12s, background .15s, border-color .15s}
+  .btn:hover{background:#FFF8F3;border-color:#E8D3C4}
+  .btn:active{transform:scale(.94)}
+  .btn-main{background:var(--accent);border-color:var(--accent-deep);color:#fff;font-family:"Noto Sans KR",sans-serif;font-weight:500}
+  .btn-main:hover{background:var(--accent-deep)}
+  .btn-main:disabled{background:#E6DED7;border-color:#E6DED7;color:#fff;cursor:not-allowed;transform:none}
+  /* 캐릭터 */
+  .stage-area{display:flex;flex-direction:column;align-items:center;gap:7px}
+  #charBox{width:220px;height:220px;border-radius:30px;border:2px dashed #EFDCCF;
+    box-shadow:inset 0 2px 10px rgba(180,150,130,.08);overflow:hidden}
+  #charBox svg{width:100%;height:100%;display:block;animation:bob 3.4s ease-in-out infinite}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+  @media (prefers-reduced-motion: reduce){#charBox svg{animation:none}}
+  .stage-name{font-family:"Noto Sans KR",sans-serif;font-weight:700;font-size:14px;background:var(--pink-weak);color:#B0607A;
+    padding:3px 14px;border-radius:999px}
+  .rest-note{font-size:12px;color:var(--warn);background:#FFF3EA;padding:4px 12px;border-radius:999px}
+  .bars{width:100%;display:flex;flex-direction:column;gap:10px;margin-top:8px}
+  .bar .head{display:flex;justify-content:space-between;font-size:12px;color:var(--sub);margin-bottom:5px}
+  .bar .head b{color:var(--text);font-variant-numeric:tabular-nums;font-weight:400}
+  .segs{display:flex;gap:4px}
+  .segs span{flex:1;height:14px;border-radius:999px;background:var(--track);transition:background .25s, transform .25s}
+  .segs span.on{background:linear-gradient(180deg,#9BD9BE,var(--accent));transform:scaleY(1.06)}
+  .segs.growth span.on{background:linear-gradient(180deg,#B6C9F0,var(--grow))}
+  .segs span.goal{box-shadow:inset 0 0 0 2.5px var(--accent-deep)}
+  /* 컨디션 */
+  .emojis{display:grid;grid-template-columns:repeat(6,1fr);gap:7px}
+  .emojis button{font-size:22px;padding:9px 0;border:1.5px solid var(--line);background:#fff;border-radius:16px;
+    transition:transform .14s, background .15s, border-color .15s}
+  .emojis button:hover{transform:translateY(-3px)}
+  .emojis button.sel{border-color:var(--accent);background:var(--accent-weak);transform:translateY(-3px) scale(1.04)}
+  .memo{width:100%;margin-top:10px;padding:10px 12px;border:1.5px solid var(--line);border-radius:14px;font-size:13px;font-family:inherit;background:#FFFDFB}
+  .memo:focus,.addrow input:focus,.timeinput:focus,.editbox:focus{outline:none;border-color:var(--accent)}
+  .row{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap}
+  .hint{font-size:12px;color:var(--sub)}
+  /* 목록 */
+  ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+  li{display:flex;align-items:center;gap:10px;font-size:14px;padding:10px 12px;border:1.5px solid var(--line);
+    border-radius:16px;background:#FFFDFB;transition:background .15s, border-color .15s}
+  li.done{background:var(--accent-weak);border-color:#BCE6D3}
+  li input[type=checkbox]{width:19px;height:19px;accent-color:var(--accent);border-radius:6px}
+  li .tag{margin-left:auto;font-size:11px;color:var(--sub);background:none;border:none;padding:0;white-space:nowrap;flex-shrink:0;cursor:pointer}
+  li .tag:hover{color:var(--accent-deep)}
+  .editbox{flex:1;min-width:0;margin-right:10px;padding:6px 9px;border:1.5px solid var(--accent);border-radius:12px;font:inherit;font-size:13px}
+  /* 고르기 칩 */
+  .chips{display:flex;flex-direction:column;gap:8px}
+  .chip{display:flex;align-items:center;gap:10px;text-align:left;font-size:14px;padding:11px 13px;
+    border:1.5px solid var(--line);background:#FFFDFB;border-radius:16px;color:var(--text);width:100%;font-family:inherit;
+    transition:transform .12s, background .15s, border-color .15s}
+  .chip:active{transform:scale(.98)}
+  .chip .mark{width:20px;height:20px;border-radius:50%;border:2px solid #E6D6C9;flex:none;transition:background .15s}
+  .chip.picked{border-color:var(--accent);background:var(--accent-weak)}
+  .chip.picked .mark{background:var(--accent);border-color:var(--accent);position:relative}
+  .chip.picked .mark::after{content:'';position:absolute;left:6px;top:3px;width:4px;height:9px;
+    border:solid #fff;border-width:0 2.5px 2.5px 0;transform:rotate(45deg)}
+  .chip .side{margin-left:auto;font-size:11px;color:var(--sub)}
+  .addrow{display:flex;gap:7px;margin-top:10px}
+  .addrow input{flex:1;padding:10px 12px;border:1.5px solid var(--line);border-radius:14px;font-size:13px;font-family:inherit;background:#FFFDFB}
+  /* 달력 */
+  .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center;font-size:11px}
+  .cal .h{color:var(--sub);padding-bottom:4px;font-weight:500}
+  .cal .d{border-radius:12px;padding:4px 0;min-height:36px;border:1.5px solid transparent;cursor:pointer;transition:background .15s}
+  .cal .d:hover{background:#FFF6EF}
+  .cal .d.today{border-color:var(--accent);background:var(--accent-weak)}
+  .cal .num{font-size:9.5px;color:var(--sub)}
+  .cal .mk{font-size:13px;line-height:1.15}
+  .legend{font-size:11px;color:var(--sub);margin-top:9px;line-height:1.6}
+  /* 알림 · 안내 띠 */
+  .notif{display:flex;align-items:center;gap:10px;justify-content:space-between;
+    background:linear-gradient(180deg,#FFFBF0,#FFF4DD);border-color:#F3E0B8;font-size:13px}
+  .ask{display:flex;flex-direction:column;gap:3px;font-size:13px;background:linear-gradient(180deg,#F4FBF7,#E9F7F0);border-color:#BCE6D3}
+  .edit-banner{display:flex;align-items:center;justify-content:space-between;gap:8px;
+    background:linear-gradient(180deg,#FFF7EF,#FFEEDF);border-color:#F2D6BC;font-size:13px}
+  .timeinput{padding:8px 10px;border:1.5px solid var(--line);border-radius:14px;font-family:inherit;font-size:13px;background:#FFFDFB}
+  li.ro{opacity:.7}
+  .toast{position:fixed;left:50%;transform:translateX(-50%) translateY(6px);bottom:24px;
+    background:#5B4A40;color:#fff;padding:11px 18px;border-radius:999px;font-size:13px;
+    opacity:0;pointer-events:none;transition:opacity .3s, transform .3s;z-index:9;box-shadow:0 6px 18px rgba(90,70,55,.25)}
+  .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+  .note{font-size:11.5px;color:var(--sub);line-height:1.7}
+  .moodhead{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px;color:var(--sub);margin:16px 0 7px}
+  .moodhead b{font-size:12.5px;color:var(--ink)}
+  .moodbar{display:flex;height:16px;border-radius:9px;overflow:hidden;background:var(--line)}
+  .moodbar i{display:block;height:100%}
+  .moodlegend{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:9px}
+  .moodlegend span{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--sub)}
+  .moodlegend b{font-size:12px;color:var(--ink)}
+  .moodlegend em{font-style:normal;width:9px;height:9px;border-radius:50%}
+  .sayline{margin:9px auto 0;max-width:94%;font-size:13px;line-height:1.6;color:var(--ink);
+           background:#FBF7F0;border:1px solid var(--line);border-radius:12px;padding:9px 13px;
+           text-align:center;cursor:pointer}
+  .sayline.wait{color:var(--sub)}
+  .aitext{margin-top:10px;background:var(--accent-weak);border:1px solid #CFE6DA;border-radius:14px;
+          padding:13px 15px;font-size:13px;line-height:1.75;color:var(--ink)}
+  .aisent{margin-top:8px;background:#FBF7F0;border:1px solid var(--line);border-radius:12px;
+          padding:11px 13px;font-size:11px;line-height:1.6;color:var(--sub);
+          white-space:pre-wrap;word-break:break-all;font-family:ui-monospace,Menlo,Consolas,monospace}
+</style>
+</head>
+<body>
+<div class="app" id="authView" hidden>
+  <div class="card" style="text-align:center;padding-top:22px">
+    <div id="authChar" style="width:150px;height:150px;margin:0 auto"></div>
+    <h1 style="font-family:'Noto Sans KR',sans-serif;font-size:21px;margin:6px 0 2px">픽셀 로그</h1>
+    <div class="hint" style="margin-bottom:16px">내 컨디션을 닮아가는 습관 다이어리</div>
+    <div id="authForm">
+      <div class="addrow"><input id="authEmail" type="email" placeholder="이메일" autocomplete="username"></div>
+      <div class="addrow"><input id="authPw" type="password" placeholder="비밀번호 (4자 이상)" autocomplete="current-password"></div>
+      <div class="row" style="justify-content:center">
+        <button class="btn btn-main" id="loginBtn">로그인</button>
+        <button class="btn" id="signupBtn">회원가입</button>
+      </div>
+      <div class="hint" id="bringRow" hidden style="margin-top:8px">
+        <label style="cursor:pointer"><input type="checkbox" id="bringLocal"> 회원가입할 때 이 기기에서 쓰던 기록도 가져오기</label>
+      </div>
+      <div class="hint" id="authMsg" style="margin-top:8px"></div>
+    </div>
+    <div class="hint" id="authOffline" hidden style="margin-bottom:10px">
+      지금은 서버에 연결할 수 없어요. 이 기기에만 저장하는 방식으로 쓸 수 있어요.
+    </div>
+    <div class="row" style="justify-content:center;margin-top:14px">
+      <button class="btn" id="guestBtn">로그인 없이 이 기기에서 쓰기</button>
+    </div>
+    <div class="hint" style="margin-top:10px">로그인하면 기록이 서버에 저장돼서 다른 기기에서도 이어서 쓸 수 있어요.</div>
+  </div>
+</div>
+
+<div class="app" id="setupView" hidden>
+  <div class="card" style="text-align:center;padding-top:22px">
+    <div id="setupChar" style="width:120px;height:120px;margin:0 auto"></div>
+    <h1 style="font-family:'Noto Sans KR',sans-serif;font-size:20px;margin:4px 0 2px">시작하기 전에</h1>
+    <div class="hint">두 가지만 정하면 끝이에요</div>
+  </div>
+
+  <div class="card">
+    <h2>매일 할 습관을 골라주세요</h2>
+    <div class="hint" style="margin:-4px 0 9px">최소 4개 · 나중에 설정에서 바꿀 수 있어요<br>하루에 4개를 채우면 캐릭터가 한 칸 자라요</div>
+    <div class="chips" id="setupList"></div>
+    <div class="addrow">
+      <input id="setupInput" placeholder="직접 추가">
+      <button class="btn" id="setupAdd">+ 추가</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>알림 받을 시간</h2>
+    <div class="hint" style="margin:-4px 0 9px">이 시간에 캐릭터가 말을 걸어요</div>
+    <div class="row" style="margin-top:0">
+      <input type="time" id="setupTime" class="timeinput" value="21:00">
+      <span class="hint">기기 알림은 설정에서 따로 켤 수 있어요</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row" style="margin-top:0">
+      <button class="btn btn-main" id="setupOk" disabled>시작하기</button>
+      <span class="hint" id="setupCount">0 / 4개 선택</span>
+    </div>
+  </div>
+</div>
+
+<div class="app" id="appView" hidden>
+
+  <div class="card notif" id="notifBar" hidden>
+    <div><b>픽셀 로그</b> <span class="hint" id="notifTime">21:00</span><br><span id="notifMsg"></span></div>
+    <button class="btn" id="notifClose">닫기</button>
+  </div>
+
+  <div class="card topbar">
+    <div>
+      <div class="date" id="dateLabel">-</div>
+      <div class="hint" id="chanceLabel">이번 주 남은 기회</div>
+    </div>
+    <div style="text-align:right">
+      <div class="hint" id="authWho">이 기기에 저장 중</div>
+      <div class="hint" id="syncState"></div>
+    </div>
+  </div>
+
+  <div class="card ask" id="askCard" hidden>
+    <div><b>어제 기록이 비어 있어요.</b><br><span class="hint">지금은 새벽이라 어제 기록을 추가할 수 있어요 (새벽 2시까지)</span></div>
+    <div class="row">
+      <button class="btn btn-main" id="askYes">어제 기록하기</button>
+      <button class="btn" id="askNo">오늘 기록하기</button>
+    </div>
+  </div>
+
+  <div class="card edit-banner" id="editBanner" hidden>
+    <span id="editBannerText">어제 기록 중</span>
+    <button class="btn" id="backToday">오늘로 돌아가기</button>
+  </div>
+
+  <div class="card stage-area">
+    <div id="charBox"></div>
+    <div class="stage-name" id="stageName">알</div>
+    <div class="rest-note" id="restNote" hidden></div>
+    <div id="sayBox" hidden>
+      <div class="sayline" id="sayLine" title="눌러서 AI에 보낸 내용 보기"></div>
+      <div class="hint" id="sayBy" hidden style="margin-top:6px"></div>
+      <pre class="aisent" id="saySent" hidden style="text-align:left"></pre>
+    </div>
+    <div class="bars">
+      <div class="bar">
+        <div class="head"><span>오늘 진행률</span><b id="todayVal">0/0</b></div>
+        <div class="segs" id="todaySegs"></div>
+      </div>
+      <div class="bar">
+        <div class="head"><span>성장 게이지</span><b id="growVal">0/3칸</b></div>
+        <div class="segs growth" id="growSegs"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 id="condTitle">오늘 컨디션은 어때요?</h2>
+    <div class="emojis" id="emojis"></div>
+    <input class="memo" id="memo" placeholder="메모 (선택)">
+    <div class="hint" id="memoHint" style="margin-top:6px">메모는 쓰는 대로 저장돼요</div>
+    <div class="row">
+      <button class="btn btn-main" id="saveCond" disabled>저장</button>
+      <span class="hint" id="condHint">이모지를 골라주세요</span>
+    </div>
+  </div>
+
+  <div class="card" id="pickCard" hidden>
+    <h2 id="pickTitle">오늘 할 항목을 골라주세요</h2>
+    <div class="hint" style="margin:-4px 0 9px">아직 완료 표시가 아니에요. 오늘 할 항목만 고르는 단계예요.<br><span id="pickHint"></span></div>
+    <div class="chips" id="pickList"></div>
+    <div class="row">
+      <button class="btn btn-main" id="pickOk" disabled>확인</button>
+      <span class="hint" id="pickCount"></span>
+    </div>
+  </div>
+
+  <div class="card" id="listCard" hidden>
+    <h2>오늘의 체크리스트</h2>
+    <ul id="list"></ul>
+    <div class="addrow">
+      <input id="addInput" placeholder="항목 추가 (오늘만)">
+      <button class="btn" id="addBtn">+ 추가</button>
+    </div>
+    <div class="legend">※ 추가는 가능, 수정은 체크 전만, 삭제는 불가</div>
+  </div>
+
+  <div class="card" id="careCard" hidden>
+    <h2>오늘의 돌봄 <span class="hint">(성장 게이지에는 포함되지 않아요)</span></h2>
+    <ul id="careList"></ul>
+    <div class="addrow">
+      <input id="careInput" placeholder="돌봄 항목 추가">
+      <button class="btn" id="careBtn">+ 추가</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 id="calTitle">달력</h2>
+    <div class="cal" id="cal"></div>
+    <div class="legend">💗 돌봄 도장 · 💤 기회 사용 · 🔅 먼지(빠진 날) · 날짜를 누르면 그날 기록을 볼 수 있어요</div>
+    <div id="moodBox" hidden>
+      <div class="moodhead"><span>이번 달 기분 분포</span><b id="moodDays">0일</b></div>
+      <div class="moodbar" id="moodBar"></div>
+      <div class="moodlegend" id="moodLegend"></div>
+      <div class="legend" id="monthStats" style="margin-top:9px"></div>
+      <div id="aiBox" style="margin-top:14px;border-top:1px solid var(--line);padding-top:13px">
+        <div class="row" style="margin-top:0">
+          <button class="btn" id="aiBtn">AI 돌아보기</button>
+          <span class="hint" id="aiHint"></span>
+        </div>
+        <div class="aitext" id="aiText" hidden></div>
+        <div class="row" id="aiMetaRow" hidden style="margin-top:8px">
+          <span class="hint" id="aiBy"></span>
+          <button class="tag" id="aiWhat">보낸 내용 보기</button>
+        </div>
+        <pre class="aisent" id="aiSent" hidden></pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="readCard" hidden>
+    <h2 id="readTitle">지난 기록</h2>
+    <div class="hint" id="readNote">수정 기간이 지났어요. 보기만 할 수 있어요.</div>
+    <ul id="readList" style="margin-top:9px"></ul>
+    <div class="row"><button class="btn" id="readClose">닫기</button></div>
+  </div>
+
+  <div class="card">
+    <h2>설정</h2>
+    <div class="hint" style="margin:-4px 0 9px">기본 습관 목록 (최소 4개) · 변경은 <b>다음 날부터</b> 반영돼요</div>
+    <ul id="habitList"></ul>
+    <div class="addrow">
+      <input id="habitInput" placeholder="습관 추가">
+      <button class="btn" id="habitAdd">+ 추가</button>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <span class="hint">계정</span>
+      <span class="hint" id="acctState">이 기기에 저장 중</span>
+      <button class="btn" id="acctBtn">로그인</button>
+    </div>
+    <div class="row">
+      <span class="hint">알림 시간</span>
+      <input type="time" id="notifyTime" class="timeinput">
+      <button class="btn" id="notifyTest">알림 미리보기</button>
+    </div>
+    <div class="row">
+      <span class="hint">브라우저 알림</span>
+      <span class="hint" id="permState">꺼짐</span>
+      <button class="btn" id="permBtn">켜기</button>
+    </div>
+    <div class="note">켜두면 화면 배너와 함께 기기 알림도 옵니다. 브라우저를 완전히 끄면 오지 않아요.</div>
+    <div class="row">
+      <span class="hint">메모도 AI에게 보내기</span>
+      <span class="hint" id="memoAiState">끄기</span>
+      <button class="btn" id="memoAiBtn">켜기</button>
+    </div>
+    <div class="note">기본은 꺼져 있어요. 꺼두면 컨디션·진행률 같은 숫자만 보내고, 메모 내용은 보내지 않아요.</div>
+    <div class="row"><button class="btn" id="devToggle">개발자 도구 열기</button></div>
+  </div>
+
+  <div class="card" id="devCard" hidden>
+    <h2>개발자 도구 <span class="hint">(점검용)</span></h2>
+    <div class="row" style="margin-top:0">
+      <span class="hint">시각</span>
+      <select id="hourSel" class="timeinput"></select>
+      <span class="hint">단계</span>
+      <select id="stageSel" class="timeinput"></select>
+    </div>
+    <div class="row">
+      <button class="btn" id="nextDay">다음 날 →</button>
+      <button class="btn" id="reset">기록 초기화</button>
+    </div>
+    <div class="note" style="margin-top:9px">실제 사용에서는 시간이 흐르면 자동으로 처리돼요. 점검할 때만 쓰는 화면이에요.</div>
+  </div>
+
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===== 설계 값 ===== */
+const CONDS = {
+  good:   {emoji:'😊', name:'좋음',  color:'#F7E08C', reduce:false, care:false, grow:true},
+  normal: {emoji:'🙂', name:'보통',  color:'#F6E5CD', reduce:false, care:false, grow:true},
+  tired:  {emoji:'😴', name:'피곤',  color:'#BCD6F2', reduce:false, care:false, grow:true},
+  sad:    {emoji:'😢', name:'우울',  color:'#C9BFEC', reduce:false, care:true,  grow:true},
+  angry:  {emoji:'😠', name:'화남',  color:'#F3A79C', reduce:false, care:true,  grow:true},
+  sick:   {emoji:'🤒', name:'아픔',  color:'#CCE5C1', reduce:true,  care:true,  grow:false}
+};
+const CARE_ITEMS = {
+  sick:  ['약 먹기','물 마시기','일찍 자기'],
+  sad:   ['산책 10분','좋아하는 음악 듣기','따뜻한 음료 마시기'],
+  angry: ['심호흡 3번','물 마시기','잠깐 걷기']
+};
+const BASE_HABITS = ['물 8잔 마시기','스트레칭 10분','일기 쓰기','비타민 먹기','11시 전에 자기'];
+const STAGES = [
+  {name:'알', need:3}, {name:'부화', need:7}, {name:'아기', need:7},
+  {name:'어린이', need:14}, {name:'청소년', need:21}, {name:'어른', need:28},
+  {name:'노인', need:Infinity}
+];
+const GROW_NEED = 4, CHANCES_PER_WEEK = 2, MISS_LIMIT = 5, MISS_PENALTY = 2;   // 하루 4개 완료 시 +1칸
+const MIN_HABITS = GROW_NEED;   // 기본 목록이 성장 기준보다 적으면 영영 성장할 수 없으므로 같은 값으로 묶는다
+
+/* ===== 상태 ===== */
+let S, tempCond=null, readKey=null;
+const DEFAULT_HABITS=['물 8잔 마시기','스트레칭 10분','일기 쓰기','비타민 먹기','11시 전에 자기'];
+function key(d){ // 로컬 시간 기준 (toISOString은 UTC라 하루가 밀림)
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), dd=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${dd}`;
+}
+function parse(k){const [y,m,d]=k.split('-').map(Number);return new Date(y,m-1,d);}
+function prevKey(k){const d=parse(k); d.setDate(d.getDate()-1); return key(d);}
+function freshState(){
+  const t=key(new Date());
+  return {today:t, days:{}, stage:0, filled:0, missStreak:0, dustLv:0,
+          settings:{baseHabits:[], notifyTime:'21:00'},     // 빈 목록 = 아직 처음 설정 전
+          target:'today', askDismissed:null,
+          finalizedUpTo:prevKey(t), notifiedOn:null};
+}
+function HABITS(){ return S.settings.baseHabits; }
+function mondayOf(k){const d=parse(k);d.setDate(d.getDate()-((d.getDay()+6)%7));return key(d);}
+function nextKey(k){const d=parse(k); d.setDate(d.getDate()+1); return key(d);}
+
+/* ===== 시계 =====
+   평소에는 진짜 시간으로 동작하고, 개발자 도구에서만 임시로 바꿀 수 있어요. */
+const DEV={hour:null, dayOffset:0};
+// 계정이 바뀌면 점검용으로 바꿔 둔 시간도 되돌린다.
+// (안 되돌리면 앞 계정에서 넘긴 날짜만큼 새 계정의 빈 날이 한꺼번에 마감돼 버린다)
+function resetDev(){ DEV.hour=null; DEV.dayOffset=0; }
+function now(){
+  const d=new Date();
+  if(DEV.dayOffset) d.setDate(d.getDate()+DEV.dayOffset);
+  if(DEV.hour!=null) d.setHours(DEV.hour,0,0,0);
+  return d;
+}
+function nowHour(){ return now().getHours(); }
+function realToday(){ return key(now()); }
+function deadlinePassed(k){              // 그 날의 기록 마감(다음 날 새벽 2시)이 지났는지
+  const d=parse(k); d.setDate(d.getDate()+1); d.setHours(2,0,0,0);
+  return now()>=d;
+}
+/* ===== 서버 연결 ===== */
+const API={ token:null, email:null };
+try{ API.token=localStorage.getItem('pixellog_token'); API.email=localStorage.getItem('pixellog_email'); }catch(e){}
+async function api(path, opts={}){
+  const res=await fetch(path,{
+    method: opts.method||'GET',
+    headers: Object.assign({'Content-Type':'application/json'}, API.token?{Authorization:'Bearer '+API.token}:{}),
+    body: opts.body?JSON.stringify(opts.body):undefined
+  });
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok) throw new Error(data.error||('요청 실패 ('+res.status+')'));
+  return data;
+}
+let dirtyDates=new Set(), syncTimer=null;
+function setSync(txt){ const el=document.getElementById('syncState'); if(el) el.textContent=txt; }
+function markDirty(k){ if(k) dirtyDates.add(k); }
+async function syncNow(){
+  if(!API.token) return;
+  const dates=[...dirtyDates]; dirtyDates.clear();
+  try{
+    setSync('저장 중…');
+    for(const k of dates){ const d=S.days[k]; if(d) await api('/api/records/'+k,{method:'PUT',body:d}); }
+    await api('/api/growth',{method:'PUT',body:{stage:S.stage,filled:S.filled,missStreak:S.missStreak,dustLv:S.dustLv}});
+    await api('/api/settings',{method:'PUT',body:S.settings});
+    setSync('서버에 저장됨');
+  }catch(e){ setSync('저장 실패: '+e.message); }
+}
+/* 로그인하지 않고 쓴 기록(LS_GUEST)과 계정 기록의 캐시(LS_ACCT)는 따로 둔다.
+   한 칸을 같이 쓰면 로그아웃한 뒤에도 이전 계정 기록이 남거나, 새로 가입한 계정이 그 기록을 물려받는다. */
+const LS_GUEST='pixellog', LS_ACCT='pixellog_acct';
+function lsKey(){ return API.token ? LS_ACCT : LS_GUEST; }
+function cache(){ try{localStorage.setItem(lsKey(),JSON.stringify(S));}catch(e){} }
+function save(){
+  cache();                                                               // 기기에도 캐시
+  if(API.token){ markDirty(targetKey()); clearTimeout(syncTimer); syncTimer=setTimeout(syncNow,400); }
+}
+function load(){
+  try{const r=localStorage.getItem(lsKey());
+    if(r){ S=JSON.parse(r);
+      if(!S.settings) S.settings={baseHabits:[],notifyTime:'21:00'};
+      if(S.dustLv==null) S.dustLv = S.dusty?1:0;
+      if(!S.target) S.target='today';
+      if(!S.today) S.today=key(new Date());
+      if(!S.finalizedUpTo) S.finalizedUpTo=prevKey(S.today);
+      return; }
+  }catch(e){}
+  S=freshState();
+}
+function inGrace(){ return nowHour()<2; }                 // 00:00~01:59 = 어제 기록 유예
+function targetKey(){ return S.target==='yesterday' ? prevKey(S.today) : S.today; }
+function today(){ return S.days[targetKey()]; }        // 지금 편집 중인 날의 기록
+function chancesLeft(){const mon=mondayOf(S.today);let u=0;for(const k in S.days){if(mondayOf(k)===mon&&S.days[k].chanceUsed)u++;}return CHANCES_PER_WEEK-u;}
+function needCount(){return GROW_NEED;}
+function minPick(){return Math.ceil(HABITS().length/2);}
+
+/* ===== 캐릭터 (레퍼런스 도트 그대로, 32x30) ===== */
+const COL={O:'#2D1A0F',C:'#FDF3D9',S:'#F2E6C6',D:'#E8D8B4',E:'#C07F50',e:'#96602F',
+  K:'#2D1A0F',W:'#FFFFFF',P:'#F5B7C4',r:'#F39089',M:'#E0655C',T:'#F08C8C',
+  G:'#F3E8D4',g:'#DDCBAA',B:'#5E6B8A',b:'#46526E',Y:'#FABE3C',y:'#E09E22',
+  L:'#9FD0F0',l:'#6FB0DD',N:'#F7D9A8',n:'#D8B37C',U:'#C3B3E8',u:'#A08CD6',
+  d:'#B9B0A2',R:'#E2554A',Z:'#7E8CC4',X:'#C3C7CF',x:'#A2A7B1',
+  H:'#5C5550',q:'#BFB3A6',w:'#C9A98C',A:'#B98F5E',F:'#F7D152'};
+const BGS={good:'#FFF6DE',normal:'#F5F0E6',tired:'#E8F0FA',sad:'#EFEAF9',angry:'#FBEAE6',sick:'#EAF4E6',none:'#F1EFE8'};
+const W=32, H=30, OY=4;                  // 스프라이트는 4행부터 (위 4줄은 먹구름·zzz 자리)
+const PUPPY=[
+  "...........OOOOOOOOOO...........",
+  "..........OOCCCCCCCCOO..........",
+  "........OOCCCCCCCCCCCCOO........",
+  ".......OOCCCCCCCCCCCCCCOO.......",
+  "......OEECCCCCCCCCCCCCCEEO......",
+  ".....OEEECCCCCCCCCCCCCCEEEO.....",
+  "....OEEEOCCCCCCCCCCCCCCOEEEO....",
+  "....OEEECCCCCCCCCCCCCCCCEEEO....",
+  "...OEEEOCCCCCCCCCCCCCCCCOEEEO...",
+  "...OEEEOCCCCCCCCCCCCCCCCOEEEO...",
+  "...OEEEOCCCOOCCCCCCOOCCCOEEEO...",
+  "...OEEEOCCCOOCCOOCCOOCCCOEEEO...",
+  "....OEEOCPPCCCCCCCCCCPPCOEEO....",
+  ".....OOOCPPCCCOCCOCCCPPCOOO.....",
+  "........OPPCCCCOOCCCCPPO........",
+  "..........OOCCCCCCCCOO..........",
+  ".........OOCCCCCCCCCCOO.........",
+  ".........OCCCCCCCCCCCCO.........",
+  ".........OCCCCCCCCCCCCOOO.......",
+  ".........OCCCCCCCCCCCCOOCO......",
+  ".........OCCCCCCCCCCCCOOCO......",
+  ".........OCCOCCCCCCOCCOOO.......",
+  ".........OCCOCCCCCCOCCO.........",
+  "..........OOOOOOOOOOOO.........."];
+const EGG=[
+  "............OOOOOOOO............",
+  "..........OOGGGGGGGGOO..........",
+  ".........OGGGGGGGGGGGGO.........",
+  "........OGGGGGGGGGGGGGGO........",
+  "........OGGGGGGGGGGGGGGO........",
+  ".......OGGGGGGGGGGGGGGGGO.......",
+  ".......OGGGgggGGGGGGGGGGO.......",
+  ".......OGGGgggGGGGGGGGGGO.......",
+  "......OGGGGGGGGGGGGGGGGGGO......",
+  "......OGGGGGGGGGGGGGGGGGGO......",
+  "......OGGGGGGGGGGGGgggGGGO......",
+  "......OGGGGGGGGGGGGgggGGGO......",
+  "......OGGGGGGGGGGGGGGGGGGO......",
+  "......OGGGgggGGGGGGGGGGGGO......",
+  "......OGGGgggGGGGGGGGGGGGO......",
+  "......OGGGGGGGGGGGGGGGGGGO......",
+  ".......OGGGGGGGGGGGGGGGGO.......",
+  ".......OGGGGGGGGGGGGGGGGO.......",
+  "........OGGGGGGGGGGGGGGO........",
+  "........OGGGGGGGGGGGGGGO........",
+  ".........OGGGGGGGGGGGGO.........",
+  "..........OOGGGGGGGGOO..........",
+  "............OOOOOOOO............"];
+const SHELL=[
+  "......OOOO..OOOOOO..OOOOOO......",
+  "......OGGGGGGGGGGGGGGGGGGO......",
+  "......OGGGGGGGGGGGGGGGGGGO......",
+  "......OGGGgggGGGGGGGGGGGGO......",
+  "......OGGGGGGGGGGGGgggGGGO......",
+  ".......OGGGGGGGGGGGGGGGGO.......",
+  "........OGGGGGGGGGGGGGGO........",
+  ".........OOGGGGGGGGGGOO.........",
+  "...........OOOOOOOOOO..........."];
+function blank(){return Array.from({length:H},()=>Array(W).fill(null));}
+function stamp(gr, art, oy){ art.forEach((row,y)=>[...row].forEach((ch,x)=>{ if(ch!=='.'&&gr[y+oy]) gr[y+oy][x]=ch; })); }
+function put(gr, list, k){ list.forEach(([x,y])=>{ if(gr[y+OY]&&x>=0&&x<W) gr[y+OY][x]=k; }); }
+function box(gr,x0,x1,y0,y1,k){ for(let y=y0;y<=y1;y++) for(let x=x0;x<=x1;x++) if(gr[y+OY]) gr[y+OY][x]=k; }
+function charSVG(opt){
+  const o=opt||{};                                   // 로그인 화면처럼 고정된 모습을 그릴 때 사용
+  const d=today();
+  const cond=('cond' in o)?o.cond:(d&&d.cond?d.cond:null);
+  const stage=('stage' in o)?o.stage:S.stage;
+  const care=('cond' in o)?[]:((d&&d.care)?d.care:[]);
+  const has=t=>care.some(c=>c.text===t&&c.done);
+  const gr=blank();
+
+  if(stage===0){ stamp(gr, EGG, OY); }
+  else{
+    stamp(gr, PUPPY, OY);
+    if(stage===1){ box(gr,0,W-1,16,23,null); stamp(gr, SHELL, 15+OY); }
+
+    const sleepy = cond==='tired'||has('일찍 자기');
+    const other = cond && (cond!=='normal' || sleepy);
+    if(other||sleepy){ box(gr,11,20,9,14,'C'); }     // 표정 자리 비우기 (볼터치는 그대로)
+
+    if(cond==='good'){
+      put(gr,[[10,11],[11,10],[12,10],[13,11],[18,11],[19,10],[20,10],[21,11]],'K');  // 반달 눈
+      put(gr,[[15,11],[16,11]],'K');                  // 코 (입과 떨어짐)
+      put(gr,[[14,13],[17,13],[15,14],[16,14]],'K');  // 보통과 같은 웃는 입
+    }else if(sleepy){
+      put(gr,[[10,10],[11,11],[12,11],[13,10],[18,10],[19,11],[20,11],[21,10]],'K');
+      put(gr,[[15,11],[16,11]],'K');                  // 코 (입과 떨어짐)
+      box(gr,15,16,13,13,'M');
+    }else if(cond==='sick'){
+      put(gr,[[10,10],[11,11],[10,12],[11,10],[21,10],[20,11],[21,12],[20,10]],'K');
+      box(gr,9,10,12,14,'r'); box(gr,21,22,12,14,'r');      // 열이 올라 볼이 붉어짐
+      put(gr,[[9,11],[10,11],[21,11],[22,11]],'r');
+      put(gr,[[2,6],[1,7],[2,7],[29,9],[28,10],[29,10]],'L');  // 땀방울
+      put(gr,[[15,12],[16,12]],'K');                  // 코 (입과 붙음)
+      put(gr,[[14,13],[17,13]],'K');
+    }else if(cond==='sad'||cond==='angry'){
+      box(gr,11,12,10,11,'K'); box(gr,19,20,10,11,'K');
+      put(gr,[[15,12],[16,12]],'K');                  // 코 (입과 붙음)
+      put(gr,[[14,13],[17,13]],'K');
+      if(cond==='angry') put(gr,[[10,8],[11,8],[12,9],[21,8],[20,8],[19,9]],'K');
+      else put(gr,[[20,12],[20,13]],'L');
+    }
+    /* cond가 normal이거나 없을 때는 원본 얼굴 그대로 */
+
+    if(stage>=2&&stage<=4){                          // 아기·어린이·청소년: 노란 손수건
+      box(gr,13,18,16,16,'Y'); box(gr,14,17,17,17,'Y'); box(gr,15,16,18,18,'y');
+    }
+    if(stage===4){                                   // 청소년: 모자
+      box(gr,11,20,0,0,'B'); box(gr,9,22,1,2,'B'); box(gr,9,22,2,2,'b');
+      put(gr,[[23,2],[24,2],[25,2],[23,3],[24,3],[25,3]],'b');
+    }
+    if(stage===6){                                   // 노인: 주름 + 흰 눈썹 + 지팡이
+      for(let y=0;y<H;y++) for(let x=0;x<W;x++) if(gr[y][x]==='E') gr[y][x]='w';   // 귀 색이 바램
+      put(gr,[[10,8],[11,8],[12,8],[19,8],[20,8],[21,8]],'q');                     // 흰 눈썹
+      put(gr,[[13,7],[14,7],[17,7],[18,7]],'w');                                   // 이마 주름
+      put(gr,[[25,16],[26,16],[26,17],[26,18],[26,19],[26,20],[26,21],[26,22]],'A'); // 지팡이
+    }
+  }
+
+  /* 컨디션·돌봄 연출 */
+  if(cond==='sick'&&stage>0){
+    if(has('물 마시기')){ box(gr,13,18,4,6,'L'); box(gr,13,18,6,6,'l'); }
+    else{ put(gr,[[19,6],[20,6],[21,6],[20,5],[21,5],[22,5],[21,4],[22,4],[23,4]],'N');
+          put(gr,[[20,6],[21,5],[22,4]],'n'); }
+  }
+  if(cond==='angry'&&stage>0){
+    put(gr,[[27,-2],[29,-2],[28,-1],[27,0],[29,0]],'R');
+    if(!has('심호흡 3번')) put(gr,[[3,-1],[5,-1],[4,0],[3,1],[5,1]],'R');
+  }
+  if(cond==='sad'&&!has('산책 10분')&&stage>0){
+    box(gr,13,18,-4,-4,'X'); box(gr,10,21,-3,-3,'X'); box(gr,9,22,-2,-2,'X');
+    put(gr,[[9,-2],[22,-2],[10,-3],[21,-3],[13,-4],[18,-4]],'x');
+  }
+  if(has('좋아하는 음악 듣기')&&stage>0){
+    box(gr,1,3,7,13,'H'); box(gr,28,30,7,13,'H'); box(gr,11,20,-1,-1,'H');
+    put(gr,[[9,0],[10,0],[21,0],[22,0],[7,1],[8,1],[23,1],[24,1],[5,2],[6,2],[25,2],[26,2],
+            [4,3],[27,3],[3,4],[28,4],[2,5],[29,5],[2,6],[29,6]],'H');
+  }
+  if(has('일찍 자기')){ box(gr,4,27,17,23,'U'); box(gr,4,27,16,16,'u'); }
+  if(cond==='tired'||has('일찍 자기'))
+    put(gr,[[26,-3],[27,-3],[28,-3],[27,-2],[26,-1],[27,-1],[28,-1],[29,0],[30,0],[29,2],[30,2],[30,1]],'Z');
+  if(cond==='good'&&stage>0) put(gr,[[2,4],[1,7],[29,4],[30,7],[2,14],[29,14],[0,10],[31,10]],'F');
+  if(S.dustLv>0&&!cond){
+    put(gr,[[5,3],[27,2],[6,20],[26,21]],'d');
+    if(S.dustLv>=2){ put(gr,[[15,-2],[23,0],[8,23],[24,23],[1,11],[30,12]],'d');
+                     box(gr,12,14,17,18,'D'); box(gr,17,19,20,21,'D'); }
+    if(S.dustLv>=3){ put(gr,[[7,0],[25,-1],[3,16],[29,17],[12,23],[19,23],[18,-1],[10,1]],'d');
+                     box(gr,10,12,19,20,'D'); box(gr,18,20,17,18,'D'); box(gr,13,17,21,22,'D');
+                     put(gr,[[5,8],[6,9],[27,8],[26,9]],'d'); }
+  }
+
+  let out='';
+  for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+    const k=gr[y][x]; if(!k) continue;
+    out+=`<rect x="${x}" y="${y}" width="1.03" height="1.03" fill="${COL[k]||'#000'}"/>`;
+  }
+  const scale=[1,1,.68,.82,.92,1,1][stage];
+  if(!opt) document.getElementById('charBox').style.background=BGS[cond||'none'];
+  return `<svg viewBox="0 0 ${W} ${H}" shape-rendering="crispEdges" role="img" aria-label="캐릭터">
+    <g transform="translate(${W/2} ${H}) scale(${scale}) translate(${-W/2} ${-H})">${out}</g></svg>`;
+}
+
+/* ===== 렌더 ===== */
+function segs(el, total, done, goal){
+  el.innerHTML='';
+  for(let i=0;i<total;i++){
+    const sp=document.createElement('span');
+    if(i<done) sp.className='on';
+    if(goal&&i===goal-1) sp.className+=' goal';
+    el.appendChild(sp);
+  }
+  if(total===0) el.appendChild(document.createElement('span'));
+}
+function label(k){ const dt=parse(k); return `${dt.getMonth()+1}월 ${dt.getDate()}일 (${['일','월','화','수','목','금','토'][dt.getDay()]})`; }
+
+function render(){
+  if(S.target==='yesterday'&&!inGrace()){ S.target='today'; toast('새벽 2시가 지나 어제 기록은 수정할 수 없어요'); }
+  const tk=targetKey(), d=today();
+
+  document.getElementById('dateLabel').textContent=label(S.today);
+  const left=Math.max(0,chancesLeft());
+  const tnow=now();
+  document.getElementById('chanceLabel').textContent=
+    `${String(tnow.getHours()).padStart(2,'0')}:${String(tnow.getMinutes()).padStart(2,'0')} · 이번 주 남은 기회 ${'●'.repeat(left)}${'○'.repeat(CHANCES_PER_WEEK-left)}`;
+
+  // 새벽 유예 안내
+  const yk=prevKey(S.today), yRec=S.days[yk];
+  document.getElementById('askCard').hidden =
+    !(inGrace() && !(yRec&&yRec.cond) && S.askDismissed!==S.today && S.target==='today');
+  const eb=document.getElementById('editBanner');
+  eb.hidden = S.target!=='yesterday';
+  document.getElementById('editBannerText').textContent=`${label(yk)} 기록 중 · 새벽 2시까지 가능`;
+  document.getElementById('condTitle').textContent =
+    S.target==='yesterday' ? '어제 컨디션은 어땠어요?' : '오늘 컨디션은 어때요?';
+
+  // 컨디션 버튼
+  const box=document.getElementById('emojis'); box.innerHTML='';
+  Object.entries(CONDS).forEach(([id,c])=>{
+    const b=document.createElement('button');
+    b.textContent=c.emoji; b.title=c.name;
+    if((d&&d.cond===id&&!tempCond)||tempCond===id) b.classList.add('sel');
+    b.onclick=()=>{tempCond=id;render();};
+    box.appendChild(b);
+  });
+  const saveBtn=document.getElementById('saveCond');
+  saveBtn.disabled=!(tempCond||d?.cond);
+  saveBtn.textContent=(d&&d.cond)?'다시 입력':'저장';
+  document.getElementById('condHint').textContent=
+    (d&&d.cond)?`${S.target==='yesterday'?'어제':'오늘'} 컨디션: ${CONDS[d.cond].emoji} ${CONDS[d.cond].name}`:'이모지를 골라주세요';
+  if(document.activeElement!==document.getElementById('memo'))
+    document.getElementById('memo').value=d?.memo||'';
+
+  // 아픈 날 항목 고르기
+  const pick=document.getElementById('pickCard');
+  pick.hidden=!(d&&d.picking);
+  if(d&&d.picking){
+    const min=minPick();
+    document.getElementById('pickTitle').textContent=`오늘은 최소 ${min}개 이상 골라주세요`;
+    document.getElementById('pickHint').textContent=
+      `아픈 날이라 ${HABITS().length}개 중 ${min}개까지 줄일 수 있어요. ${GROW_NEED}개 이상 완료하면 성장도 해요.`;
+    const wrap=document.getElementById('pickList'); wrap.innerHTML='';
+    HABITS().forEach((t,i)=>{
+      const on=d.picked.includes(i), locked=(d.doneTexts||[]).includes(t);
+      const b=document.createElement('button');
+      b.className='chip'+((on||locked)?' picked':'');
+      b.innerHTML=`<span class="mark"></span><span>${t}</span>`+(locked?'<span class="side">완료함</span>':'');
+      b.onclick=()=>{ if(locked) return;
+        d.picked = on ? d.picked.filter(x=>x!==i) : [...d.picked,i]; save(); render(); };
+      wrap.appendChild(b);
+    });
+    const chosen=new Set([...d.picked, ...HABITS().map((t,i)=>(d.doneTexts||[]).includes(t)?i:-1).filter(i=>i>=0)]);
+    document.getElementById('pickCount').textContent=`${chosen.size} / ${min}개 선택`;
+    document.getElementById('pickOk').disabled=chosen.size<min;
+  }
+
+  // 체크리스트
+  const listCard=document.getElementById('listCard');
+  listCard.hidden=!(d&&d.cond&&!d.picking);
+  if(!listCard.hidden){
+    const ul=document.getElementById('list'); ul.innerHTML='';
+    d.items.forEach(it=>{
+      const li=document.createElement('li'); if(it.done) li.classList.add('done');
+      const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=it.done;
+      cb.onchange=()=>{it.done=cb.checked;checkGrowth();save();render();};
+      const span=document.createElement('span'); span.textContent=it.text;
+      li.appendChild(cb); li.appendChild(span);
+      if(!it.done){
+        const ed=document.createElement('button'); ed.className='tag'; ed.textContent='수정';
+        ed.onclick=()=>{
+          span.hidden=true; ed.hidden=true;
+          const inp=document.createElement('input'); inp.className='editbox'; inp.value=it.text;
+          const ok=document.createElement('button'); ok.className='tag'; ok.textContent='저장';
+          ok.onclick=()=>{ if(inp.value.trim()) it.text=inp.value.trim(); save(); render(); };
+          inp.onkeydown=e=>{ if(e.key==='Enter') ok.click(); if(e.key==='Escape') render(); };
+          li.insertBefore(inp,ed); li.appendChild(ok); inp.focus();
+        };
+        li.appendChild(ed);
+      }else{
+        const t=document.createElement('span'); t.className='tag'; t.textContent='완료'; li.appendChild(t);
+      }
+      ul.appendChild(li);
+    });
+  }
+
+  // 돌봄
+  const careCard=document.getElementById('careCard');
+  careCard.hidden=!(d&&d.cond&&CONDS[d.cond].care&&!d.picking);
+  if(!careCard.hidden){
+    const ul=document.getElementById('careList'); ul.innerHTML='';
+    d.care.forEach(it=>{
+      const li=document.createElement('li'); if(it.done) li.classList.add('done');
+      const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=it.done;
+      cb.onchange=()=>{ it.done=cb.checked;
+        if(cb.checked&&!d.stamped){d.stamped=true;toast('돌봄 도장 💗 이 달력에 찍혔어요');}
+        save(); render(); };
+      li.appendChild(cb); li.append(it.text); ul.appendChild(li);
+    });
+  }
+
+  // 게이지
+  const total=d?.items?.length||0, done=d?.items?.filter(i=>i.done).length||0;
+  const need=needCount();
+  document.getElementById('todayVal').textContent=
+    (d&&d.picking) ? '오늘 할 항목을 고르는 중'
+    : total===0    ? '컨디션을 입력하면 목록이 생겨요'
+    : total<GROW_NEED ? `${done}/${total} · 오늘은 ${total}개만 해도 괜찮아요`
+                      : `${done}/${total} · ${GROW_NEED}개 하면 +1칸`;
+  segs(document.getElementById('todaySegs'), total, done, need<=total?need:0);
+  const st=STAGES[S.stage];
+  document.getElementById('stageName').textContent=st.name;
+  document.getElementById('growVal').textContent= st.need===Infinity?'최종 단계':`${S.filled}/${st.need}칸`;
+  segs(document.getElementById('growSegs'), st.need===Infinity?10:st.need, st.need===Infinity?10:S.filled, 0);
+  const rest=document.getElementById('restNote');
+  rest.hidden=!(d&&d.cond==='sick');
+  rest.textContent=`아픈 날은 ${minPick()}개까지 줄일 수 있어요 · ${GROW_NEED}개 하면 성장해요`;
+
+  document.getElementById('charBox').innerHTML=charSVG();
+  renderSay(); renderCal(); renderSettings(); renderRead();
+}
+function renderCal(){
+  const dt=parse(S.today), y=dt.getFullYear(), m=dt.getMonth();
+  document.getElementById('calTitle').textContent=`${y}년 ${m+1}월`;
+  const cal=document.getElementById('cal'); cal.innerHTML='';
+  ['월','화','수','목','금','토','일'].forEach(h=>{
+    const e=document.createElement('div'); e.className='h'; e.textContent=h; cal.appendChild(e);
+  });
+  const off=(new Date(y,m,1).getDay()+6)%7;
+  for(let i=0;i<off;i++) cal.appendChild(document.createElement('div'));
+  const last=new Date(y,m+1,0).getDate(); let stamps=0;
+  for(let i=1;i<=last;i++){
+    const k=key(new Date(y,m,i)), rec=S.days[k];
+    const cell=document.createElement('div'); cell.className='d'+(k===targetKey()?' today':'');
+    const num=document.createElement('div'); num.className='num'; num.textContent=i; cell.appendChild(num);
+    const mk=document.createElement('div'); mk.className='mk';
+    if(rec&&rec.cond){ mk.textContent=CONDS[rec.cond].emoji+(rec.stamped?'💗':''); if(rec.stamped)stamps++; }
+    else if(rec&&rec.chanceUsed) mk.textContent='💤';
+    else if(rec&&rec.missed) mk.textContent='🔅';
+    cell.appendChild(mk);
+    cell.onclick=()=>openDay(k);
+    cal.appendChild(cell);
+  }
+  renderMood(y,m,stamps);
+}
+
+/* ===== 이번 달 돌아보기 =====
+   기분 분포만 보여주면 '요약'에서 끝나므로, 돌봄·기회·성장까지 같은 줄에 둔다. */
+const MOOD_BAR={good:'#F2CE4E',normal:'#DCC49B',tired:'#8FBDE8',sad:'#A88FD6',angry:'#ED8273',sick:'#9AD08D'};
+function renderMood(y,m,stamps){
+  const box=document.getElementById('moodBox');
+  const count={}, order=['good','normal','tired','sad','angry','sick'];
+  let total=0, chance=0, missed=0, grew=0;
+  const last=new Date(y,m+1,0).getDate();
+  for(let i=1;i<=last;i++){
+    const rec=S.days[key(new Date(y,m,i))]; if(!rec) continue;
+    if(rec.cond){ count[rec.cond]=(count[rec.cond]||0)+1; total++; }
+    if(rec.chanceUsed) chance++;
+    if(rec.missed) missed++;
+    if(rec.grew) grew++;
+  }
+  box.hidden = total===0;
+  if(!total) return;
+
+  document.getElementById('moodDays').textContent=`${total}일 기록`;
+  const bar=document.getElementById('moodBar'); bar.innerHTML='';
+  const leg=document.getElementById('moodLegend'); leg.innerHTML='';
+  order.forEach(c=>{
+    const n=count[c]||0; if(!n) return;                     // 0일인 컨디션은 빼서 읽기 쉽게
+    const pct=Math.round(n/total*100);
+    const seg=document.createElement('i');
+    seg.style.width=(n/total*100)+'%'; seg.style.background=MOOD_BAR[c];
+    seg.title=`${CONDS[c].name} ${n}일`;
+    bar.appendChild(seg);
+    const s=document.createElement('span');
+    const dot=document.createElement('em'); dot.style.background=MOOD_BAR[c];
+    s.appendChild(dot);
+    s.append(CONDS[c].emoji+' '+CONDS[c].name+' ');
+    const b=document.createElement('b'); b.textContent=`${n}일 (${pct}%)`;   // 색만으로 말하지 않기
+    s.appendChild(b);
+    leg.appendChild(s);
+  });
+  const parts=[`성장 ${grew}칸`, `돌봄 도장 ${stamps}개`];
+  if(chance) parts.push(`기회 ${chance}번`);
+  if(missed) parts.push(`빠진 날 ${missed}일`);
+  document.getElementById('monthStats').textContent='이번 달 · '+parts.join(' · ');
+  renderAI(`${y}-${String(m+1).padStart(2,'0')}`);
+}
+
+/* ===== AI 캐릭터 한마디 =====
+   컨디션을 저장할 때 하루 한 번만 받아 온다. 받은 문장은 그날치로 저장해 둔다. */
+function renderSay(){
+  const box=document.getElementById('sayBox'), line=document.getElementById('sayLine');
+  const k=targetKey(), d=S.days[k];
+  const cached=S.say&&S.say.date===k ? S.say : null;
+  if(!API.token || !(d&&d.cond) || !cached){ box.hidden=true; return; }
+  box.hidden=false;
+  line.textContent='🐶 '+cached.text;
+  line.classList.remove('wait');
+  document.getElementById('sayBy').textContent =
+    cached.by==='rule' ? '서버 문구 (AI 호출 실패 또는 키 없음)' : `모델: ${cached.by}`;
+}
+document.getElementById('sayLine').onclick=()=>{            // 눌러서 보낸 내용 확인
+  if(!S.say) return;
+  const by=document.getElementById('sayBy'), sent=document.getElementById('saySent');
+  const show=by.hidden;
+  by.hidden=!show; sent.hidden=!show;
+  sent.textContent=JSON.stringify(S.say.sent,null,1);
+};
+async function requestSay(){
+  const k=targetKey(), d=S.days[k];
+  if(!API.token || !(d&&d.cond)) return;
+  const box=document.getElementById('sayBox'), line=document.getElementById('sayLine');
+  box.hidden=false; line.classList.add('wait'); line.textContent='🐶 …';
+  document.getElementById('sayBy').hidden=true; document.getElementById('saySent').hidden=true;
+  try{
+    if(dirtyDates.size){ clearTimeout(syncTimer); await syncNow(); }   // 방금 저장한 기록 기준으로
+    const r=await api('/api/ai/say',{method:'POST',
+      body:{date:k, includeMemo:!!(S.settings&&S.settings.sendMemo)}});
+    S.say={date:k, text:r.text, by:r.by, sent:r.sent};
+    save(); renderSay();
+  }catch(e){ S.say=null; document.getElementById('sayBox').hidden=true; }
+}
+
+/* ===== AI 한 달 돌아보기 =====
+   서버가 DB에서 '숫자만' 뽑아 모델에 보낸다. 메모 본문은 보내지 않는다.
+   키가 없거나 호출이 실패하면 서버가 규칙으로 만든 문장을 돌려준다. */
+function renderAI(month){
+  const btn=document.getElementById('aiBtn'), hint=document.getElementById('aiHint');
+  const box=document.getElementById('aiText'), meta=document.getElementById('aiMetaRow');
+  const sent=document.getElementById('aiSent');
+  if(!API.token){                                   // 크레딧이 드는 기능이라 로그인한 사람만
+    btn.hidden=true; box.hidden=true; meta.hidden=true; sent.hidden=true;
+    hint.textContent='로그인하면 AI 돌아보기를 쓸 수 있어요';
+    return;
+  }
+  btn.hidden=false;
+  const cached=S.ai&&S.ai.month===month ? S.ai : null;
+  btn.textContent=cached?'다시 만들기':'AI 돌아보기';
+  hint.textContent=cached?'':'이번 달 숫자를 모아 한 문단으로 정리해요';
+  box.hidden=!cached; meta.hidden=!cached;
+  if(cached){
+    box.textContent=cached.text;
+    document.getElementById('aiBy').textContent =
+      cached.by==='rule' ? '서버 규칙으로 만든 문장 (AI 호출 실패 또는 키 없음)' : `모델: ${cached.by}`;
+    sent.hidden=true;
+    document.getElementById('aiWhat').textContent='보낸 내용 보기';
+  }
+}
+document.getElementById('aiWhat').onclick=()=>{
+  const sent=document.getElementById('aiSent'), b=document.getElementById('aiWhat');
+  if(!S.ai) return;
+  sent.hidden=!sent.hidden;
+  sent.textContent=JSON.stringify(S.ai.sent,null,1);
+  b.textContent=sent.hidden?'보낸 내용 보기':'접기';
+};
+document.getElementById('aiBtn').onclick=async()=>{
+  const btn=document.getElementById('aiBtn');
+  const month=key(parse(S.today)).slice(0,7);
+  btn.disabled=true; const old=btn.textContent; btn.textContent='만드는 중…';
+  try{
+    if(dirtyDates.size){ clearTimeout(syncTimer); await syncNow(); }   // 최신 기록으로 요약
+    const r=await api('/api/ai/summary',{method:'POST',body:{month}});
+    S.ai={month, text:r.text, by:r.by, sent:r.sent};
+    save(); renderAI(month);
+    if(r.error) toast('AI 호출에 실패해서 기본 문장으로 대신했어요');
+  }catch(e){ toast('요약을 만들지 못했어요: '+e.message); }
+  finally{ btn.disabled=false; if(btn.textContent==='만드는 중…') btn.textContent=old; }
+};
+function openDay(k){
+  if(k===S.today){ S.target='today'; readKey=null; save(); render(); return; }
+  if(k===prevKey(S.today)&&inGrace()){ S.target='yesterday'; readKey=null; save(); render(); return; }
+  if(parse(k)>parse(S.today)){ toast('아직 오지 않은 날이에요'); return; }
+  readKey=k; toast('수정 기간이 지났어요. 보기만 할 수 있어요'); render();
+}
+function renderRead(){
+  const card=document.getElementById('readCard');
+  card.hidden=!readKey;
+  if(!readKey) return;
+  const rec=S.days[readKey];
+  document.getElementById('readTitle').textContent=label(readKey)+' 기록';
+  const ul=document.getElementById('readList'); ul.innerHTML='';
+  if(!rec||!rec.cond){
+    document.getElementById('readNote').textContent =
+      (rec&&rec.chanceUsed ? '기록이 없지만 기회를 사용한 날이에요 💤' : '기록하지 않은 날이에요 🔅')
+      + (rec&&rec.memo ? ' · 메모: '+rec.memo : '');
+    return;
+  }
+  document.getElementById('readNote').textContent=
+    `컨디션 ${CONDS[rec.cond].emoji} ${CONDS[rec.cond].name}${rec.stamped?' · 돌봄 도장 💗':''}${rec.memo?' · 메모: '+rec.memo:''} — 수정 기간이 지났어요`;
+  (rec.items||[]).forEach(it=>{
+    const li=document.createElement('li'); li.className='ro'+(it.done?' done':'');
+    const cb=document.createElement('input'); cb.type='checkbox'; cb.checked=it.done; cb.disabled=true;
+    li.appendChild(cb); li.append(it.text); ul.appendChild(li);
+  });
+}
+function ed2(i){                                   // i번째 습관을 수정 모드로
+  const li=document.querySelectorAll('#habitList > li')[i]; if(!li) return;
+  const t=HABITS()[i];
+  li.innerHTML='';
+  const inp=document.createElement('input'); inp.className='editbox'; inp.value=t;
+  const ok=document.createElement('button'); ok.className='tag'; ok.textContent='저장';
+  const no=document.createElement('button'); no.className='tag'; no.textContent='취소'; no.style.marginLeft='8px';
+  ok.onclick=()=>{ const v=inp.value.trim();
+    if(v && v!==t){ HABITS()[i]=v; toast('다음 날부터 반영돼요'); }
+    save(); render(); };
+  no.onclick=()=>render();
+  inp.onkeydown=e=>{ if(e.key==='Enter') ok.click(); if(e.key==='Escape') render(); };
+  li.append(inp, ok, no); inp.focus(); inp.select();
+}
+function renderSettings(){
+  const ul=document.getElementById('habitList'); ul.innerHTML='';
+  HABITS().forEach((t,i)=>{
+    const li=document.createElement('li');
+    const span=document.createElement('span'); span.textContent=t; li.appendChild(span);
+    const ed=document.createElement('button'); ed.className='tag'; ed.textContent='수정';
+    ed.onclick=()=>{
+      // 한 줄씩만 고친다: 다른 줄이 수정 중이면 먼저 닫고(render), 이 줄은 입력칸 + 저장 + 취소로 바꾼다
+      if(document.querySelector('#habitList .editbox')){ render(); return ed2(i); }
+      ed2(i);
+    };
+    li.appendChild(ed);
+    const del=document.createElement('button'); del.className='tag'; del.textContent='삭제';
+    del.style.marginLeft='8px';
+    del.onclick=()=>{
+      if(HABITS().length<=MIN_HABITS){ toast(`기본 목록은 ${MIN_HABITS}개 이상이어야 해요`); return; }
+      S.settings.baseHabits=HABITS().filter((_,j)=>j!==i);
+      toast('다음 날부터 목록에서 빠져요'); save(); render();
+    };
+    li.appendChild(del);
+    ul.appendChild(li);
+  });
+  document.getElementById('notifyTime').value=S.settings.notifyTime;
+  const sel=document.getElementById('hourSel');
+  if(sel.options.length!==25){
+    sel.innerHTML='';
+    const auto=document.createElement('option'); auto.value=''; auto.textContent='실제 시각'; sel.appendChild(auto);
+    for(let h=0;h<24;h++){ const o=document.createElement('option'); o.value=h;
+      o.textContent=String(h).padStart(2,'0')+':00'; sel.appendChild(o); }
+  }
+  sel.value = DEV.hour==null ? '' : String(DEV.hour);
+  const ss=document.getElementById('stageSel');
+  if(ss.options.length!==STAGES.length){
+    ss.innerHTML='';
+    STAGES.forEach((st,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=st.name; ss.appendChild(o); });
+  }
+  ss.value=S.stage;
+
+  const ps=document.getElementById('permState'), pb=document.getElementById('permBtn');
+  if(!notifySupported()){ ps.textContent='이 브라우저는 지원하지 않아요'; pb.hidden=true; }
+  else if(Notification.permission==='granted'){ ps.textContent='켜짐'; pb.hidden=true; }
+  else if(Notification.permission==='denied'){ ps.textContent='차단됨 (브라우저 설정에서 허용해주세요)'; pb.hidden=true; }
+  else { ps.textContent='꺼짐'; pb.hidden=false; }
+
+  const on=!!(S.settings&&S.settings.sendMemo);
+  document.getElementById('memoAiState').textContent=on?'켜짐':'꺼짐';
+  document.getElementById('memoAiBtn').textContent=on?'끄기':'켜기';
+}
+document.getElementById('memoAiBtn').onclick=()=>{
+  S.settings.sendMemo=!S.settings.sendMemo;
+  save(); renderSettings();
+  toast(S.settings.sendMemo?'메모도 함께 보내요':'메모는 보내지 않아요');
+};
+function notifyMsg(){
+  const rec=S.days[S.today];
+  return S.dustLv>=2 ? '나 많이 꼬질해졌어… 보고 싶어 🥺'
+    : S.dustLv===1 ? '나 먼지 쌓였어… 어디 갔어? 🥺'
+    : (rec&&rec.cond) ? '오늘도 기록해줘서 고마워 🐶'
+    : '오늘 컨디션은 어때? 🙂';
+}
+function notify(auto){
+  const bar=document.getElementById('notifBar');
+  const msg=notifyMsg();
+  document.getElementById('notifTime').textContent=S.settings.notifyTime;
+  document.getElementById('notifMsg').textContent=msg;
+  bar.hidden=false;
+  if(auto) setTimeout(()=>{bar.hidden=true;},6000);
+  systemNotify(msg);                         // 화면 배너에 더해 기기 알림도 (권한이 있을 때만)
+}
+
+/* ===== 기기 알림 =====
+   화면 배너는 항상 뜨고, 권한이 허용돼 있을 때만 기기 알림이 덤으로 붙는다.
+   실패해도 배너는 그대로이므로 조용히 넘어간다. */
+function notifySupported(){ return 'Notification' in window; }
+function systemNotify(body){
+  if(!notifySupported() || Notification.permission!=='granted') return;
+  charIcon(icon=>{
+    try{
+      const n=new Notification('픽셀 로그', {body, icon:icon||undefined, tag:'pixellog'});
+      n.onclick=()=>{ try{ window.focus(); }catch(e){} n.close(); };
+    }catch(e){}                              // 생성자를 막는 환경(안드로이드 크롬 등)
+  });
+}
+let iconCache={key:null, url:null};
+function charIcon(cb){                        // 지금 캐릭터 모습을 알림 아이콘용 PNG로
+  const rec=S.days[S.today]||{};
+  const k=S.stage+'|'+(rec.cond||'')+'|'+S.dustLv;
+  if(iconCache.key===k) return cb(iconCache.url);
+  let done=false;
+  const finish=u=>{ if(done) return; done=true; iconCache={key:k,url:u}; cb(u); };
+  try{
+    const svg=charSVG({stage:S.stage, cond:rec.cond||null})
+      .replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" width="192" height="180" ');
+    const img=new Image();
+    img.onload=()=>{
+      try{
+        const c=document.createElement('canvas'); c.width=192; c.height=180;
+        const x=c.getContext('2d');
+        x.fillStyle=BGS[rec.cond||'none']||'#F1EFE8'; x.fillRect(0,0,192,180);
+        x.imageSmoothingEnabled=false; x.drawImage(img,0,0,192,180);
+        finish(c.toDataURL('image/png'));
+      }catch(e){ finish(null); }
+    };
+    img.onerror=()=>finish(null);
+    setTimeout(()=>finish(null), 400);        // 아이콘이 늦으면 아이콘 없이 보냄
+    img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg);
+  }catch(e){ finish(null); }
+}
+function toast(msg){
+  const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('on');
+  clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('on'),1900);
+}
+
+/* ===== 동작 ===== */
+function ensureDay(){
+  const k=targetKey();
+  if(!S.days[k]) S.days[k]={cond:null,memo:'',items:[],care:[],picked:[],picking:false,stamped:false,grew:false};
+}
+function buildItems(idx, doneTexts){
+  return idx.slice().sort((a,b)=>a-b).map(i=>({text:HABITS()[i], done:doneTexts.includes(HABITS()[i])}));
+}
+document.getElementById('saveCond').onclick=()=>{
+  ensureDay(); const d=today(); const cond=tempCond||d.cond; if(!cond) return;
+  d.memo=document.getElementById('memo').value;
+  const first=!d.cond; d.cond=cond; tempCond=null;
+  if(S.dustLv>0&&S.target==='today'){S.dustLv=0; toast('먼지를 털어내고 깨끗해졌어요');}
+  S.missStreak=0;
+  const doneTexts=d.items.filter(i=>i.done).map(i=>i.text);
+  d.doneTexts=doneTexts;
+  if(CONDS[cond].reduce){
+    d.picking=true;
+    d.picked=HABITS().map((t,i)=>doneTexts.includes(t)?i:-1).filter(i=>i>=0);
+  }else{
+    d.items=buildItems(HABITS().map((_,i)=>i), doneTexts);
+    d.items.push(...(d.extraItems||[]));
+    d.picking=false;
+  }
+  d.care = CONDS[cond].care ? (CARE_ITEMS[cond]||[]).map(t=>({text:t,done:false})) : [];
+  if(!first) toast('컨디션을 다시 입력했어요. 완료한 항목은 유지돼요');
+  S.say=null;                     // 컨디션이 바뀌었으니 한마디도 새로 받는다
+  checkGrowth(); save(); render();
+  requestSay();
+};
+/* 메모는 저장 버튼과 상관없이, 타자 칠 때마다 바로 저장됩니다.
+   (예전에는 저장 버튼을 누를 때만 읽어서, 그 뒤에 쓴 메모가 사라졌어요) */
+let memoTimer=null;
+document.getElementById('memo').oninput=e=>{
+  ensureDay(); today().memo=e.target.value; save();
+  const h=document.getElementById('memoHint');
+  clearTimeout(memoTimer);
+  memoTimer=setTimeout(()=>{
+    h.textContent='메모 저장됨 ✓';
+    setTimeout(()=>{ h.textContent='메모는 쓰는 대로 저장돼요'; },1500);
+  },500);
+};
+document.getElementById('pickOk').onclick=()=>{
+  const d=today(); const doneTexts=d.doneTexts||[];
+  const idx=new Set(d.picked);
+  HABITS().forEach((t,i)=>{ if(doneTexts.includes(t)) idx.add(i); });
+  d.items=buildItems([...idx], doneTexts);
+  d.items.push(...(d.extraItems||[]));
+  d.picking=false; checkGrowth(); save(); render();
+};
+document.getElementById('addBtn').onclick=()=>{
+  const el=document.getElementById('addInput'), v=el.value.trim(); if(!v)return;
+  const d=today(); if(!d||!d.cond){ toast('먼저 컨디션을 입력해주세요'); return; }
+  const it={text:v,done:false};
+  d.items.push(it); d.extraItems=(d.extraItems||[]).concat([it]);
+  el.value=''; checkGrowth(); save(); render();
+};
+document.getElementById('careBtn').onclick=()=>{
+  const el=document.getElementById('careInput'), v=el.value.trim(); if(!v)return;
+  today().care.push({text:v,done:false}); el.value=''; save(); render();
+};
+document.getElementById('habitAdd').onclick=()=>{
+  const el=document.getElementById('habitInput'), v=el.value.trim(); if(!v)return;
+  S.settings.baseHabits=[...HABITS(), v]; el.value='';
+  toast('다음 날부터 반영돼요'); save(); render();
+};
+document.getElementById('notifyTime').onchange=e=>{ S.settings.notifyTime=e.target.value; save(); toast('알림 시간을 저장했어요'); };
+document.getElementById('notifyTest').onclick=()=>notify(false);
+document.getElementById('permBtn').onclick=async()=>{      // 권한 요청은 사용자가 누를 때만
+  if(!notifySupported()) return;
+  try{
+    const r=await Notification.requestPermission();
+    renderSettings();
+    if(r==='granted'){ toast('기기 알림을 켰어요'); systemNotify('알림이 이렇게 와요 🐶'); }
+    else toast('알림이 허용되지 않았어요. 화면 배너는 그대로 떠요');
+  }catch(e){ toast('이 브라우저에서는 켤 수 없어요'); }
+};
+document.getElementById('notifClose').onclick=()=>{ document.getElementById('notifBar').hidden=true; };
+document.getElementById('hourSel').onchange=e=>{
+  DEV.hour = e.target.value==='' ? null : Number(e.target.value);
+  catchUp(); save(); render();
+};
+document.getElementById('stageSel').onchange=e=>{
+  S.stage=Number(e.target.value); S.filled=0; save(); render();
+  toast(`${STAGES[S.stage].name} 단계로 바꿨어요 (확인용)`);
+};
+document.getElementById('askYes').onclick=()=>{ S.target='yesterday'; save(); render(); };
+document.getElementById('askNo').onclick=()=>{ S.askDismissed=S.today; save(); render(); };
+document.getElementById('backToday').onclick=()=>{ S.target='today'; tempCond=null; save(); render(); };
+document.getElementById('readClose').onclick=()=>{ readKey=null; render(); };
+
+function checkGrowth(){
+  const d=today(); if(!d||!d.cond||d.picking) return;
+  const done=d.items.filter(i=>i.done).length;
+  if(d.grew) return;
+  if(done>=GROW_NEED){
+    d.grew=true; S.filled++;
+    const st=STAGES[S.stage];
+    if(st.need!==Infinity&&S.filled>=st.need){ S.stage++; S.filled=0; toast(`🎉 ${STAGES[S.stage].name} 단계로 성장했어요!`); }
+    else toast('성장 게이지 +1칸');
+  }
+}
+/* ===== 하루 마감 (자동) =====
+   날짜가 바뀌고 새벽 2시가 지나면, 그 전날을 자동으로 마감합니다.
+   앱을 며칠 동안 열지 않았어도 다시 열 때 빠진 날이 한 번에 처리돼요. */
+function finalizeDay(k){
+  const d=S.days[k];
+  if(d&&d.cond) return null;                       // 기록한 날은 그대로 둠
+  S.days[k]=d||{cond:null,items:[],care:[],picked:[],picking:false};
+  S.dustLv=Math.min(3,(S.dustLv||0)+1);
+  let kind;
+  if(chancesLeft()>0){ S.days[k].chanceUsed=true; kind='chance'; }   // 기회 사용: 연속 일수에 포함 안 됨
+  else{
+    S.days[k].missed=true; S.missStreak++; kind='miss';
+    if(S.missStreak>=MISS_LIMIT){                  // 5일 연속이면 게이지 2칸 감소
+      S.missStreak=0; S.filled-=MISS_PENALTY;
+      while(S.filled<0&&S.stage>0){ S.stage--; S.filled+=STAGES[S.stage].need; }
+      if(S.filled<0) S.filled=0;
+      kind='decay';
+    }
+  }
+  markDirty(k);
+  return kind;
+}
+function catchUp(){
+  if(!S.finalizedUpTo) S.finalizedUpTo=prevKey(realToday());
+  let changed=false, miss=0, chance=0, decay=0, guard=0;
+  while(guard++<800){
+    const k=nextKey(S.finalizedUpTo);
+    if(!deadlinePassed(k)) break;
+    const kind=finalizeDay(k);
+    if(kind==='chance') chance++; else if(kind==='miss') miss++; else if(kind==='decay'){miss++;decay++;}
+    S.finalizedUpTo=k; changed=true;
+  }
+  const t=realToday();
+  if(S.today!==t){                                  // 날짜가 넘어감
+    S.today=t; S.target='today'; S.askDismissed=null; tempCond=null; readKey=null; changed=true;
+  }
+  if(decay) toast('5일 연속 기록이 없어 성장 게이지가 2칸 줄었어요');
+  else if(miss) toast(`기록이 없던 ${miss}일 동안 먼지가 쌓였어요`);
+  else if(chance) toast(`기회를 ${chance}번 사용했어요 (연속 일수에는 포함되지 않아요)`);
+  return changed;
+}
+
+/* ===== 1분마다 시간 확인 ===== */
+let tickSig='';
+function tick(){
+  const sig=realToday()+'|'+nowHour();
+  const changed=catchUp();
+  if(changed||sig!==tickSig){ tickSig=sig; save(); render(); }
+  const rec=S.days[S.today];
+  if(nowHour()===Number((S.settings.notifyTime||'21:00').slice(0,2))
+     && S.notifiedOn!==S.today && !(rec&&rec.cond)){
+    S.notifiedOn=S.today; save(); notify(true);
+  }
+}
+
+document.getElementById('nextDay').onclick=()=>{   // 개발자 도구: 하루 건너뛰기
+  DEV.dayOffset++; catchUp(); save(); render();
+  toast('하루 넘겼어요 (점검용)');
+};
+let resetArmed=false;
+const resetBtn=document.getElementById('reset');
+resetBtn.onclick=()=>{
+  if(!resetArmed){ resetArmed=true; resetBtn.textContent='정말 초기화?';
+    setTimeout(()=>{resetArmed=false;resetBtn.textContent='기록 초기화';},3000); return; }
+  S=freshState(); DEV.hour=null; DEV.dayOffset=0;
+  resetArmed=false; resetBtn.textContent='기록 초기화'; readKey=null; save(); enter();
+};
+
+/* ===== 로그인 화면 / 앱 화면 전환 ===== */
+let serverUp=false;
+function renderAccount(){
+  const on=!!API.token;
+  const who=on?(API.email||'로그인됨'):'이 기기에 저장 중';
+  document.getElementById('authWho').textContent=who;
+  document.getElementById('acctState').textContent=who;
+  document.getElementById('acctBtn').textContent=on?'로그아웃':'로그인';
+}
+/* ===== 처음 설정 =====
+   기본 습관 목록이 비어 있으면 아직 설정하지 않은 사용자로 본다.
+   (회원가입 직후 서버도 빈 목록으로 만든다) */
+const SUGGEST=['물 8잔 마시기','스트레칭 10분','일기 쓰기','비타민 먹기','11시 전에 자기',
+               '책 10쪽 읽기','산책 20분','방 정리하기'];
+let setupPick=[], setupExtra=[];
+function needsSetup(){ return !(S.settings && S.settings.baseHabits && S.settings.baseHabits.length>=MIN_HABITS); }
+function guestState(){ try{ const r=localStorage.getItem(LS_GUEST); return r?JSON.parse(r):null; }catch(e){ return null; } }
+function guestHasData(){ const g=guestState(); return !!(g && g.days && Object.keys(g.days).length); }
+function showSetup(){
+  document.getElementById('authView').hidden=true;
+  document.getElementById('appView').hidden=true;
+  document.getElementById('setupView').hidden=false;
+  document.getElementById('setupChar').innerHTML=charSVG({stage:0, cond:null});
+  document.getElementById('setupTime').value=(S.settings&&S.settings.notifyTime)||'21:00';
+  setupPick=[...new Set((S.settings&&S.settings.baseHabits)||[])];
+  setupExtra=setupPick.filter(t=>!SUGGEST.includes(t));
+  renderSetup();
+}
+function renderSetup(){
+  const wrap=document.getElementById('setupList'); wrap.innerHTML='';
+  [...SUGGEST, ...setupExtra].forEach(t=>{
+    const on=setupPick.includes(t);
+    const b=document.createElement('button');
+    b.className='chip'+(on?' picked':'');
+    b.innerHTML='<span class="mark"></span><span></span>';
+    b.lastChild.textContent=t;
+    b.onclick=()=>{ setupPick = on ? setupPick.filter(x=>x!==t) : [...setupPick,t]; renderSetup(); };
+    wrap.appendChild(b);
+  });
+  document.getElementById('setupCount').textContent=`${setupPick.length} / ${MIN_HABITS}개 선택`;
+  document.getElementById('setupOk').disabled=setupPick.length<MIN_HABITS;
+}
+document.getElementById('setupAdd').onclick=()=>{
+  const el=document.getElementById('setupInput'), v=el.value.trim(); if(!v) return;
+  if(!SUGGEST.includes(v)&&!setupExtra.includes(v)) setupExtra.push(v);
+  if(!setupPick.includes(v)) setupPick.push(v);
+  el.value=''; renderSetup();
+};
+document.getElementById('setupInput').onkeydown=e=>{ if(e.key==='Enter') document.getElementById('setupAdd').click(); };
+document.getElementById('setupOk').onclick=()=>{
+  if(setupPick.length<MIN_HABITS) return;
+  S.settings.baseHabits=[...setupPick];
+  S.settings.notifyTime=document.getElementById('setupTime').value||'21:00';
+  save(); showApp(); toast('준비 끝! 오늘 컨디션부터 기록해볼까요');
+};
+
+function showAuth(){
+  document.getElementById('appView').hidden=true;
+  document.getElementById('setupView').hidden=true;
+  document.getElementById('authView').hidden=false;
+  document.getElementById('authForm').hidden=!serverUp;
+  document.getElementById('authOffline').hidden=serverUp;
+  document.getElementById('authMsg').textContent='';
+  document.getElementById('bringRow').hidden=!guestHasData();   // 가져올 기록이 있을 때만 보인다
+  document.getElementById('bringLocal').checked=false;
+  document.getElementById('authChar').innerHTML=charSVG({stage:3, cond:'good'});
+}
+function showApp(){
+  document.getElementById('authView').hidden=true;
+  document.getElementById('setupView').hidden=true;
+  document.getElementById('appView').hidden=false;
+  renderAccount(); render();
+}
+function enter(){ if(needsSetup()) showSetup(); else showApp(); }   // 설정이 끝났으면 바로 앱으로
+document.getElementById('guestBtn').onclick=()=>{
+  try{ localStorage.setItem('pixellog_guest','1'); }catch(e){}
+  enter();
+};
+document.getElementById('acctBtn').onclick=async()=>{
+  if(API.token){
+    try{ await api('/api/logout',{method:'POST'}); }catch(e){}
+    API.token=null; API.email=null;
+    try{ localStorage.removeItem('pixellog_token'); localStorage.removeItem('pixellog_email');
+         localStorage.removeItem('pixellog_guest'); localStorage.removeItem(LS_ACCT); }catch(e){}
+    resetDev(); load();                        // 계정 기록은 내리고, 이 기기에서 쓰던 기록으로 돌아간다
+    setSync(''); showAuth();
+  }else{
+    try{ localStorage.removeItem('pixellog_guest'); }catch(e){}
+    serverUp=await ping(); showAuth();
+  }
+};
+document.getElementById('devToggle').onclick=()=>{
+  const c=document.getElementById('devCard');
+  c.hidden=!c.hidden;
+  document.getElementById('devToggle').textContent=c.hidden?'개발자 도구 열기':'개발자 도구 닫기';
+  if(!c.hidden) c.scrollIntoView({behavior:'smooth'});
+};
+async function ping(){
+  try{ const r=await fetch('/api/ping',{cache:'no-store'}); return r.ok; }catch(e){ return false; }
+}
+async function pullState(){
+  const st=await api('/api/state');
+  S=freshState();                              // 다른 계정이나 이 기기 기록이 섞이지 않게 새로 시작
+  S.settings=st.settings;
+  S.stage=st.growth.stage; S.filled=st.growth.filled;
+  S.missStreak=st.growth.missStreak; S.dustLv=st.growth.dustLv;
+  S.days=st.days;
+  // 마지막 기록 다음 날부터 마감 처리를 이어간다 (기록이 없으면 어제까지 끝난 것으로)
+  const last=Object.keys(S.days).sort().pop(), y=prevKey(realToday());
+  S.finalizedUpTo = last && last<y ? last : y;
+  cache();
+}
+async function doAuth(kind){
+  const email=document.getElementById('authEmail').value.trim();
+  const pw=document.getElementById('authPw').value;
+  const msg=document.getElementById('authMsg');
+  msg.textContent='처리 중…';
+  try{
+    const r=await api('/api/'+kind,{method:'POST',body:{email,password:pw}});
+    resetDev();
+    API.token=r.token; API.email=r.email;
+    try{ localStorage.setItem('pixellog_token',r.token); localStorage.setItem('pixellog_email',r.email); }catch(e){}
+    if(kind==='signup'){
+      // 새 계정은 빈 상태에서 시작한다 → 처음 설정 화면이 나온다.
+      // 로그인 없이 쓰던 기록이 있고 "가져오기"를 체크했을 때만 그 기록을 서버로 올린다.
+      const bring=document.getElementById('bringLocal').checked && guestHasData();
+      if(bring){ S=guestState(); Object.keys(S.days).forEach(markDirty); await syncNow(); }
+      else S=freshState();
+      cache();
+    }else{ await pullState(); }
+    msg.textContent=''; document.getElementById('authPw').value='';
+    try{ localStorage.removeItem('pixellog_guest'); }catch(e){}
+    catchUp(); setSync('서버에 저장됨');
+    toast(kind==='signup'?'가입했어요. 기록이 서버에 저장돼요':'로그인했어요');
+    enter();                                   // 처음 가입이면 설정 화면부터
+  }catch(e){ msg.textContent=e.message; }
+}
+document.getElementById('loginBtn').onclick=()=>doAuth('login');
+document.getElementById('signupBtn').onclick=()=>doAuth('signup');
+
+async function boot(){
+  load();
+  catchUp();
+  serverUp=await ping();
+  if(API.token && serverUp){
+    try{ await pullState(); catchUp(); setSync('서버에 저장됨'); }
+    catch(e){ API.token=null; try{localStorage.removeItem('pixellog_token');}catch(_){ } }
+  }
+  let guest=false;
+  try{ guest=localStorage.getItem('pixellog_guest')==='1'; }catch(e){}
+  renderAccount();
+  if(API.token||guest) enter(); else showAuth();
+  tickSig=realToday()+'|'+nowHour();
+  setInterval(tick,30000);
+}
+boot();
+</script>
+</body>
+</html>
